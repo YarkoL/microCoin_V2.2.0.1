@@ -1,4 +1,4 @@
-New microCoin 2.2.0.1 continue microCoin development
+New microCoin 2.2.0.2 continue microCoin development
 - Algorithm updated to X13
 - Proof of Stake enabled
 
