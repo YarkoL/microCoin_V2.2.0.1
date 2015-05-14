@@ -1444,8 +1444,20 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
                     }
 
                     // Insert change txn at random position:
-                    vector<CTxOut>::iterator position = wtxNew.vout.begin()+GetRandInt(wtxNew.vout.size());
+                    vector<CTxOut>::iterator position = wtxNew.vout.begin()+GetRandInt(wtxNew.vout.size()+ 1);
+
+                    // -- don't put change output between value and reference outputs
+                    if (position > wtxNew.vout.begin() && position < wtxNew.vout.end())
+                    {
+                        while (position > wtxNew.vout.begin())
+                        {
+                            if (position->nValue != 0)
+                                break;
+                            position--;
+                        };
+                    };
                     wtxNew.vout.insert(position, CTxOut(nChange, scriptChange));
+
                 }
                 else
                     reservekey.ReturnKey();
@@ -1487,10 +1499,19 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64_t> >& vecSend, 
     return true;
 }
 
-bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl* coinControl)
+bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, std::string& sNarr,CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl* coinControl)
 {
     vector< pair<CScript, int64_t> > vecSend;
     vecSend.push_back(make_pair(scriptPubKey, nValue));
+
+    if (sNarr.length() > 0)
+    {
+       std::vector<uint8_t> vNarr(sNarr.c_str(), sNarr.c_str() + sNarr.length());
+       CScript scriptN = CScript() << OP_RETURN << vNarr;
+
+       vecSend.push_back(make_pair(scriptN, 0));
+    }
+
     return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
 }
 
@@ -1812,7 +1833,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
 
 
 
-string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, bool fAskFee)
+string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, std::string& sNarr,CWalletTx& wtxNew, bool fAskFee)
 {
     CReserveKey reservekey(this);
     int64_t nFeeRequired;
@@ -1829,7 +1850,7 @@ string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNe
         printf("SendMoney() : %s", strError.c_str());
         return strError;
     }
-    if (!CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired))
+    if (!CreateTransaction(scriptPubKey, nValue, sNarr, wtxNew, reservekey, nFeeRequired))
     {
         string strError;
         if (nValue + nFeeRequired > GetBalance())
@@ -1851,19 +1872,20 @@ string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNe
 
 
 
-string CWallet::SendMoneyToDestination(const CTxDestination& address, int64_t nValue, CWalletTx& wtxNew, bool fAskFee)
+string CWallet::SendMoneyToDestination(const CTxDestination& address, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, bool fAskFee)
 {
     // Check amount
     if (nValue <= 0)
         return _("Invalid amount");
     if (nValue + nTransactionFee > GetBalance())
         return _("Insufficient funds");
-
+    if (sNarr.length() > 24)
+           throw runtime_error("Reference must be 24 characters or less.");
     // Parse Bitcoin address
     CScript scriptPubKey;
     scriptPubKey.SetDestination(address);
 
-    return SendMoney(scriptPubKey, nValue, wtxNew, fAskFee);
+    return SendMoney(scriptPubKey, nValue, sNarr, wtxNew, fAskFee);
 }
 
 
