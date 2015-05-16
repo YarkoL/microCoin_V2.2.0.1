@@ -30,7 +30,8 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
     int64_t nNet = nCredit - nDebit;
     uint256 hash = wtx.GetHash(), hashPrev = 0;
     std::map<std::string, std::string> mapValue = wtx.mapValue;
-
+    txnouttype txtype;
+    std::vector<std::vector<unsigned char> > values;
     if (nNet > 0 || wtx.IsCoinBase() || wtx.IsCoinStake())
     {
         //
@@ -38,6 +39,10 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
         //
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
         {
+
+            if (!Solver(txout.scriptPubKey, txtype, values)) {
+                continue; //nonstandard
+            }
             if(wallet->IsMine(txout))
             {
                 TransactionRecord sub(hash, nTime);
@@ -56,6 +61,9 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     sub.type = TransactionRecord::RecvFromOther;
                     sub.address = mapValue["from"];
                 }
+
+                if (txtype == TX_REFERENCE)
+                        continue;
                 if (wtx.IsCoinBase())
                 {
                     // Generated (proof-of-work)
@@ -72,27 +80,34 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     sub.credit = nNet > 0 ? nNet : wtx.GetValueOut() - nDebit;
                     hashPrev = hash;
                 }
-
+                sub.reference = mapValue["reference"];
                 parts.append(sub);
             }
         }
     }
     else
     {
+
         bool fAllFromMe = true;
         BOOST_FOREACH(const CTxIn& txin, wtx.vin)
             fAllFromMe = fAllFromMe && wallet->IsMine(txin);
 
         bool fAllToMe = true;
-        BOOST_FOREACH(const CTxOut& txout, wtx.vout)
+        BOOST_FOREACH(const CTxOut& txout, wtx.vout) {
+            if (!Solver(txout.scriptPubKey, txtype, values)) {
+                    continue; //nonstandard
+            }
+            if (txtype == TX_REFERENCE) continue;
             fAllToMe = fAllToMe && wallet->IsMine(txout);
-
+        }
         if (fAllFromMe && fAllToMe)
         {
             // Payment to self
+            std::string reference("");
             int64_t nChange = wtx.GetChange();
 
-            parts.append(TransactionRecord(hash, nTime, TransactionRecord::SendToSelf, "",
+            if (txtype == TX_REFERENCE) reference = mapValue["reference"];
+            parts.append(TransactionRecord(hash, nTime, TransactionRecord::SendToSelf, "", reference,
                             -(nDebit - nChange), nCredit - nChange));
         }
         else if (fAllFromMe)
@@ -101,13 +116,18 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
             // Debit
             //
             int64_t nTxFee = nDebit - wtx.GetValueOut();
-
             for (unsigned int nOut = 0; nOut < wtx.vout.size(); nOut++)
             {
+
                 const CTxOut& txout = wtx.vout[nOut];
+                if (!Solver(txout.scriptPubKey, txtype, values)) {
+                        continue; //nonstandard
+                }
                 TransactionRecord sub(hash, nTime);
                 sub.idx = parts.size();
-
+                if (txtype == TX_REFERENCE) {
+                     continue;
+                }
                 if(wallet->IsMine(txout))
                 {
                     // Ignore parts sent to self, as this is usually the change
@@ -137,6 +157,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     nTxFee = 0;
                 }
                 sub.debit = -nValue;
+                sub.reference = mapValue["reference"];
 
                 parts.append(sub);
             }
@@ -146,7 +167,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
             //
             // Mixed debit transaction, can't break down payees
             //
-            parts.append(TransactionRecord(hash, nTime, TransactionRecord::Other, "", nNet, 0));
+            parts.append(TransactionRecord(hash, nTime, TransactionRecord::Other, "", "", nNet, 0));
         }
     }
 

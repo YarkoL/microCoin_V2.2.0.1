@@ -313,9 +313,10 @@ Value sendtoaddress(const Array& params, bool fHelp)
     // Wallet comments
     CWalletTx wtx;
     std::string sNarr;
-    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
+    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty()) {
         sNarr = params[2].get_str();
-
+        wtx.mapValue["reference"] = sNarr;
+    }
     if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
         wtx.mapValue["comment"] = params[3].get_str();
     if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
