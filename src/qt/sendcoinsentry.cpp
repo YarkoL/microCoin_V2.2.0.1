@@ -24,11 +24,13 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
     ui->addAsLabel->setPlaceholderText(tr("Enter a label for this address to add it to your address book"));
     ui->payTo->setPlaceholderText(tr("Enter a microCoin address (e.g. Sjz75uKHzUQJnSdzvpiigEGxseKkDhQToX)"));
+    ui->lineEditReference->setPlaceholderText(tr("Enter optional reference with payment (max 24 characters)"));
 #endif
     setFocusPolicy(Qt::TabFocus);
     setFocusProxy(ui->payTo);
 
     GUIUtil::setupAddressWidget(ui->payTo, this);
+    ui->lineEditReference->setMaxLength(24);
 }
 
 SendCoinsEntry::~SendCoinsEntry()
@@ -88,6 +90,7 @@ void SendCoinsEntry::clear()
     ui->addAsLabel->clear();
     ui->payAmount->clear();
     ui->payTo->setFocus();
+    ui->lineEditReference->clear();
     // update the display unit, to not use the default ("BTC")
     updateDisplayUnit();
 }
@@ -133,7 +136,7 @@ SendCoinsRecipient SendCoinsEntry::getValue()
     rv.address = ui->payTo->text();
     rv.label = ui->addAsLabel->text();
     rv.amount = ui->payAmount->value();
-
+    rv.reference = ui->lineEditReference->text();
     return rv;
 }
 
@@ -144,7 +147,8 @@ QWidget *SendCoinsEntry::setupTabChain(QWidget *prev)
     QWidget::setTabOrder(ui->addressBookButton, ui->pasteButton);
     QWidget::setTabOrder(ui->pasteButton, ui->deleteButton);
     QWidget::setTabOrder(ui->deleteButton, ui->addAsLabel);
-    return ui->payAmount->setupTabChain(ui->addAsLabel);
+    QWidget::setTabOrder(ui->addAsLabel, ui->lineEditReference);
+    return ui->payAmount->setupTabChain(ui->lineEditReference);
 }
 
 void SendCoinsEntry::setValue(const SendCoinsRecipient &value)
@@ -152,6 +156,7 @@ void SendCoinsEntry::setValue(const SendCoinsRecipient &value)
     ui->payTo->setText(value.address);
     ui->addAsLabel->setText(value.label);
     ui->payAmount->setValue(value.amount);
+    ui->lineEditReference->setText(value.reference);
 }
 
 bool SendCoinsEntry::isClear()

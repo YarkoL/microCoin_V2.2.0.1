@@ -28,6 +28,7 @@ public:
     QString address;
     QString label;
     qint64 amount;
+    QString reference;
 };
 
 /** Interface to Bitcoin wallet from Qt view code. */
@@ -49,6 +50,7 @@ public:
         DuplicateAddress,
         TransactionCreationFailed, // Error returned when wallet is still locked
         TransactionCommitFailed,
+        ReferenceTooLong,
         Aborted
     };
 

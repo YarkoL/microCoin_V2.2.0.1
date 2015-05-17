@@ -183,14 +183,35 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
 
         // Sendmany
         std::vector<std::pair<CScript, int64_t> > vecSend;
+
+        std::string sNarr;
         foreach(const SendCoinsRecipient &rcp, recipients)
         {
             CScript scriptPubKey;
             scriptPubKey.SetDestination(CBitcoinAddress(rcp.address.toStdString()).Get());
             vecSend.push_back(make_pair(scriptPubKey, rcp.amount));
+
+            sNarr = rcp.reference.toStdString();
+            if (sNarr.length() > 0)
+            {
+               if (sNarr.length() > 24)
+               {
+                   printf("Reference is too long.\n");
+                   return ReferenceTooLong;
+               };
+
+               std::vector<uint8_t> vNarr(sNarr.c_str(), sNarr.c_str() + sNarr.length());
+
+               CScript scriptN = CScript() << OP_RETURN << vNarr;
+
+               vecSend.push_back(make_pair(scriptN, 0));
+            }
         }
 
         CWalletTx wtx;
+        if (sNarr.length() > 0) {
+            wtx.mapValue["reference"] = sNarr;
+        }
         CReserveKey keyChange(wallet);
         int64_t nFeeRequired = 0;
         bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);
