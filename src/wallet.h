@@ -26,6 +26,9 @@ class CReserveKey;
 class COutput;
 class CCoinControl;
 
+typedef std::map<std::string, std::string> mapValue_t;
+
+
 /** (client) version numbers for particular wallet features */
 enum WalletFeature
 {
@@ -187,7 +190,7 @@ public:
     bool CreateTransaction(const std::vector<std::pair<CScript, int64_t> >& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl *coinControl=NULL);
     bool CreateTransaction(CScript scriptPubKey, int64_t nValue, std::string& sNarr, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl *coinControl=NULL);
     bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
-
+    bool ExtractReference(const CTransaction& tx, mapValue_t& mapNarr);
     bool GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight);
     bool CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key);
 
@@ -350,7 +353,6 @@ public:
 };
 
 
-typedef std::map<std::string, std::string> mapValue_t;
 
 
 static void ReadOrderPos(int64_t& nOrderPos, mapValue_t& mapValue)

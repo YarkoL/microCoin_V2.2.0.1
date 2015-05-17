@@ -554,9 +554,18 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
         LOCK(cs_wallet);
         bool fExisted = mapWallet.count(hash);
         if (fExisted && !fUpdate) return false;
+
+        mapValue_t mapNarr;
+        ExtractReference(tx, mapNarr);
+
         if (fExisted || IsMine(tx) || IsFromMe(tx))
         {
             CWalletTx wtx(this,tx);
+
+            if (!mapNarr.empty()) {
+                wtx.mapValue.insert(mapNarr.begin(), mapNarr.end());
+            }
+
             // Get merkle branch if transaction was found in a block
             if (pblock)
                 wtx.SetMerkleBranch(pblock);
@@ -1513,6 +1522,36 @@ bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, std::strin
     }
 
     return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
+}
+
+bool CWallet::ExtractReference(const CTransaction& tx, mapValue_t& mapNarr)
+{
+    if (fDebug)
+        printf("ExtractReference() tx: %s\n", tx.GetHash().GetHex().c_str());
+
+    mapNarr.clear();
+
+    std::vector<uint8_t> vchNarr;
+    opcodetype opCode;
+    char cbuf[256];
+    int32_t nOutputId = -1;
+    BOOST_FOREACH(const CTxOut& txout, tx.vout)
+    {
+        nOutputId++;
+        CScript::const_iterator it = txout.scriptPubKey.begin();
+
+        if (txout.scriptPubKey.GetOp(it, opCode, vchNarr)&& opCode == OP_RETURN)
+        {
+            if (txout.scriptPubKey.GetOp(it, opCode, vchNarr) && vchNarr.size() > 0) {
+                std::string sNarr = std::string(vchNarr.begin(), vchNarr.end());
+                //reference always matches preceding value output
+                snprintf(cbuf, sizeof(cbuf), "reference");
+                mapNarr[cbuf] = sNarr;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // NovaCoin: get current stake weight
