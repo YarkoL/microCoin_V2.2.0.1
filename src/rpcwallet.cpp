@@ -1,4 +1,4 @@
-// Copyright (c) 2010 Satoshi Nakamoto
+﻿// Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -1278,13 +1278,21 @@ Value getreference(const Array& params, bool fHelp)
     Object entry;
     uint256 hash;
     hash.SetHex(params[0].get_str());
-    std::string reference = "";
+    std::string reference;
+    bool hasReference;
     if (pwalletMain->mapWallet.count(hash))
     {
         CWalletTx& wtx = pwalletMain->mapWallet[hash];
         reference = wtx.mapValue["reference"];
+    } else {
+        CTransaction tx;
+        uint256 hashBlock = 0;
+        if (GetTransaction(hash, tx, hashBlock)) {
+           hasReference = pwalletMain->ReadReference(tx, reference);
+        } else
+           throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "No information available about transaction");
     }
-    entry.push_back(Pair("reference", reference.length() > 0 ? reference : "not found"));
+    entry.push_back(Pair("reference", hasReference? reference : "not found"));
     return entry;
 }
 

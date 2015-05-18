@@ -556,11 +556,11 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl
         if (fExisted && !fUpdate) return false;
 
         mapValue_t mapNarr;
-        ExtractReference(tx, mapNarr);
 
         if (fExisted || IsMine(tx) || IsFromMe(tx))
         {
             CWalletTx wtx(this,tx);
+            ExtractReference(tx, mapNarr);
 
             if (!mapNarr.empty()) {
                 wtx.mapValue.insert(mapNarr.begin(), mapNarr.end());
@@ -1523,7 +1523,7 @@ bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, std::strin
 
     return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
 }
-
+//extract reference from a tx involving me and add it to map
 bool CWallet::ExtractReference(const CTransaction& tx, mapValue_t& mapNarr)
 {
     if (fDebug)
@@ -1553,6 +1553,32 @@ bool CWallet::ExtractReference(const CTransaction& tx, mapValue_t& mapNarr)
     }
     return false;
 }
+
+//read reference from any tx
+bool CWallet::ReadReference(const CTransaction& tx, std::string& sNarr)
+{
+    if (fDebug)
+        printf("ReadReference() tx: %s\n", tx.GetHash().GetHex().c_str());
+
+    std::vector<uint8_t> vchNarr;
+    opcodetype opCode;
+    int32_t nOutputId = -1;
+    BOOST_FOREACH(const CTxOut& txout, tx.vout)
+    {
+        nOutputId++;
+        CScript::const_iterator it = txout.scriptPubKey.begin();
+
+        if (txout.scriptPubKey.GetOp(it, opCode, vchNarr)&& opCode == OP_RETURN)
+        {
+            if (txout.scriptPubKey.GetOp(it, opCode, vchNarr) && vchNarr.size() > 0) {
+                sNarr = std::string(vchNarr.begin(), vchNarr.end());
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 
 // NovaCoin: get current stake weight
 bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight)
