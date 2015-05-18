@@ -1281,7 +1281,7 @@ Value getreference(const Array& params, bool fHelp)
     std::string reference = "";
     if (pwalletMain->mapWallet.count(hash))
     {
-        const CWalletTx& wtx = pwalletMain->mapWallet[hash];
+        CWalletTx& wtx = pwalletMain->mapWallet[hash];
         reference = wtx.mapValue["reference"];
     }
     entry.push_back(Pair("reference", reference.length() > 0 ? reference : "not found"));
