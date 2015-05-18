@@ -1269,6 +1269,26 @@ Value listsinceblock(const Array& params, bool fHelp)
     return ret;
 }
 
+Value getreference(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "getreference <txid>\n"
+            "Get reference string from <txid> if it exists");
+    Object entry;
+    uint256 hash;
+    hash.SetHex(params[0].get_str());
+    std::string reference = "";
+    if (pwalletMain->mapWallet.count(hash))
+    {
+        const CWalletTx& wtx = pwalletMain->mapWallet[hash];
+        reference = wtx.mapValue["reference"];
+    }
+    entry.push_back(Pair("reference", reference.length() > 0 ? reference : "not found"));
+    return entry;
+}
+
+
 Value gettransaction(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
