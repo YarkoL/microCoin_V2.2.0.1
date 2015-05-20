@@ -684,9 +684,12 @@ bool AppInit2()
             InitError(_("Unable to sign checkpoint, wrong checkpointkey?\n"));
     }
 
-    BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
-        AddOneShot(strDest);
-		AddOneShot("178.62.154.31");
+   if (GetDefaultPort() == GetListenPort()) {
+       BOOST_FOREACH(string strDest, mapMultiArgs["-seednode"])
+           AddOneShot(strDest);
+       AddOneShot("178.62.154.31");
+   }
+
     // ********************************************************* Step 7: load blockchain
 
     if (!bitdb.Open(GetDataDir()))

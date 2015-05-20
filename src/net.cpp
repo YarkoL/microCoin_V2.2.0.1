@@ -1143,6 +1143,7 @@ static const char *strDNSSeed[][2] = {
 
 void ThreadDNSAddressSeed(void* parg)
 {
+    if (GetDefaultPort() != GetListenPort()) return;
     // Make this thread recognisable as the DNS seeding thread
     RenameThread("microCoin-dnsseed");
 
