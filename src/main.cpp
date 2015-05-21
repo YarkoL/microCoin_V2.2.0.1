@@ -319,7 +319,7 @@ bool CTransaction::IsStandard() const
 
     txnouttype whichType;
     BOOST_FOREACH(const CTxOut& txout, vout) {
-        if (!::IsStandard(txout.scriptPubKey))
+        if (!::IsStandard(txout.scriptPubKey, whichType))
             return false;
         if (whichType == TX_REFERENCE) {
             nDataOut++;
